@@ -1,0 +1,15 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "pipeline-postgres",
+      "Group": "Servers",
+      "Host": "pipeline-postgres",
+      "Port": 5432,
+      "MaintenanceDB": "pipeline",
+      "Username": "pipelineuser",
+      "Password": "pipelinepass",
+      "SSLMode": "prefer",
+      "SavePassword": true
+    }
+  }
+}

@@ -1,0 +1,146 @@
+name: file-pipeline
+
+services:
+
+  # ─────────────────────────────────────────
+  # FastAPI — Upload API + Status API
+  # ─────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    container_name: pipeline-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://pipelineuser:pipelinepass@postgres:5432/pipeline
+      - REDIS_URL=redis://redis:6379/0
+      - STORAGE_PATH=/app/storage
+    volumes:
+      - ./storage:/app/storage
+      - ./app:/app
+      - ./tests:/app/tests
+      - ./test_data:/app/test_data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pipeline_network
+
+  # ─────────────────────────────────────────
+  # Worker — Pipeline processor
+  # ─────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://pipelineuser:pipelinepass@postgres:5432/pipeline
+      - REDIS_URL=redis://redis:6379/0
+      - STORAGE_PATH=/app/storage
+      - MAX_RETRIES=3
+      - PROC_TIME_EST_SAMPLE_ROWS=10
+    volumes:
+      - ./storage:/app/storage
+      - ./app:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pipeline_network
+
+  # ─────────────────────────────────────────
+  # Redis — Job queue
+  # ─────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: pipeline-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pipeline_network
+
+  # ─────────────────────────────────────────
+  # PostgreSQL — Job and step tracking
+  # ─────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: pipeline-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pipelineuser
+      POSTGRES_PASSWORD: pipelinepass
+      POSTGRES_DB: pipeline
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data_vol:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pipelineuser -d pipeline"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pipeline_network
+
+  # ─────────────────────────────────────────
+  # pgAdmin — PostgreSQL UI
+  # ─────────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pipeline-pgadmin
+    restart: unless-stopped
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@pipeline.com
+      - PGADMIN_DEFAULT_PASSWORD=admin1234!
+      - PGADMIN_SERVER_JSON_FILE=/pgadmin4/servers.json
+    ports:
+      - "9090:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./config/pgDbConf/servers.json:/pgadmin4/servers.json
+    networks:
+      - pipeline_network
+
+  # ─────────────────────────────────────────
+  # RedisInsight — Redis queue UI
+  # ─────────────────────────────────────────
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: pipeline-redisinsight
+    restart: unless-stopped
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight_data:/data
+    networks:
+      - pipeline_network
+
+# ─────────────────────────────────────────
+# Volumes
+# ─────────────────────────────────────────
+volumes:
+  pg_data_vol:
+  pgadmin_data:
+  redisinsight_data:
+
+# ─────────────────────────────────────────
+# Networks
+# ─────────────────────────────────────────
+networks:
+  pipeline_network:
+    driver: bridge
