@@ -35,10 +35,10 @@ User → FastAPI (Upload/Status API) → Redis (Queue) → Workers → Storage
 
 ```bash
 # Single worker
-docker compose -f docker-compose.ha_misrad.yml up
+docker compose -f docker-compose.yml up
 
 # Multiple workers (parallel processing)
-docker compose -f docker-compose.ha_misrad.yml up --scale worker=2
+docker compose -f docker-compose.yml up --scale worker=2
 ```
 
 ### Access the services
@@ -192,7 +192,7 @@ curl -X POST http://localhost:8000/jobs/{job_id}/retry
 
 ## Configuration
 
-Environment variables (set in docker-compose.ha_misrad.yml):
+Environment variables (set in docker-compose.yml):
 
 | Variable | Default | Description |
 |---|---|---|

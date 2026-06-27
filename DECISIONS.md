@@ -29,7 +29,7 @@
 
 **Configurable retry logic:**
 ```yaml
-# docker-compose.ha_misrad.yml
+# docker-compose.yml
 worker:
   environment:
     - MAX_RETRIES=3
@@ -108,7 +108,7 @@ worker:
 
 **How to scale workers:**
 ```bash
-docker compose -f docker-compose.ha_misrad.yml up --scale worker=3
+docker compose -f docker-compose.yml up --scale worker=3
 ```
 
 **Note:** The `container_name` was removed from the worker service to allow scaling. Docker automatically names workers `file-pipeline-worker-1`, `file-pipeline-worker-2`, etc.
