@@ -7,6 +7,8 @@ Upload files, process them through configurable pipeline steps, and retrieve res
 
 ## Architecture
 
+![Architecture Diagram](architecture.svg)
+
 ```
 User → FastAPI (Upload/Status API) → Redis (Queue) → Workers → Storage
                                            ↕
